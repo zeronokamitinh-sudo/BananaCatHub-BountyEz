@@ -1,0 +1,129 @@
+local Player = game.Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+local StatsService = game:GetService("Stats")
+
+-- 1. Xóa bản cũ nếu tồn tại
+if PlayerGui:FindFirstChild("BananaCatOverlay") then
+    PlayerGui.BananaCatOverlay:Destroy()
+end
+
+-- 2. Hàm ẩn nút điều khiển Mobile
+local function ToggleControls(visible)
+    local touchGui = PlayerGui:FindFirstChild("TouchGui")
+    if touchGui then
+        touchGui.Enabled = visible
+    end
+end
+
+-- 3. Tạo ScreenGui chính với thứ tự hiển thị cao nhất
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "BananaCatOverlay"
+screenGui.Parent = PlayerGui
+screenGui.IgnoreGuiInset = true 
+screenGui.ResetOnSpawn = false
+-- Tăng DisplayOrder lên cực cao để đè lên mọi hiệu ứng và thông báo game
+screenGui.DisplayOrder = 999999 
+
+-- 4. Khung nền đen đặc che phủ mọi thứ (Skill, Particles, UI game)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(1, 0, 1, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Đen tuyệt đối
+mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 1
+mainFrame.Parent = screenGui
+
+-- 5. Container chứa nội dung
+local centerContainer = Instance.new("Frame")
+centerContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
+centerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+centerContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+centerContainer.BackgroundTransparency = 1
+centerContainer.ZIndex = 2
+centerContainer.Parent = mainFrame
+
+-- 6. Tiêu đề: Banana Cat Hub (Vàng) Auto Bounty (Đỏ)
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.25, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 55
+title.RichText = true
+title.Text = '<font color="rgb(255, 255, 0)">Banana Cat Hub</font> <font color="rgb(255, 20, 20)">Auto Bounty</font>'
+title.Parent = centerContainer
+
+-- 7. Nhãn Bounty và Time
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Size = UDim2.new(1, 0, 0.4, 0)
+statsLabel.Position = UDim2.new(0, 0, 0.25, 0)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Font = Enum.Font.SourceSans
+statsLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+statsLabel.TextSize = 32
+statsLabel.Text = "Total Bounty Earned: 0\nTime Elapsed: 0h:0m:0s\nClient Time Elapsed: 0h:0m:0s"
+statsLabel.Parent = centerContainer
+
+-- 8. Nhãn FPS | Players | Ping (Vàng chanh)
+local extraStatsLabel = Instance.new("TextLabel")
+extraStatsLabel.Size = UDim2.new(1, 0, 0.15, 0)
+extraStatsLabel.Position = UDim2.new(0, 0, 0.65, 0)
+extraStatsLabel.BackgroundTransparency = 1
+extraStatsLabel.Font = Enum.Font.SourceSans
+extraStatsLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+extraStatsLabel.TextSize = 32
+extraStatsLabel.Text = "FPS: 0 | Players: 0 | Ping: 0ms"
+extraStatsLabel.Parent = centerContainer
+
+-- --- LOGIC CẬP NHẬT DỮ LIỆU ---
+local startTime = tick()
+local totalBountyEarned = 0
+local initialBounty = 0
+local fps = 0
+local lastUpdate = tick()
+local frameCount = 0
+
+local leaderstats = Player:FindFirstChild("leaderstats")
+if leaderstats and leaderstats:FindFirstChild("Bounty") then
+    initialBounty = leaderstats.Bounty.Value
+    leaderstats.Bounty.Changed:Connect(function(newVal)
+        if newVal > initialBounty then
+            totalBountyEarned = newVal - initialBounty
+        end
+    end)
+end
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastUpdate >= 1 then
+        fps = frameCount
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+local function formatTime(seconds)
+    local h = math.floor(seconds / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%dh:%dm:%ds", h, m, s)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if not screenGui or not screenGui.Parent then break end
+        local elapsed = tick() - startTime
+        local playerCount = #game.Players:GetPlayers()
+        local ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+
+        statsLabel.Text = string.format("Total Bounty Earned: %d\nTime Elapsed: %s\nClient Time Elapsed: %s", totalBountyEarned, formatTime(elapsed), formatTime(elapsed))
+        extraStatsLabel.Text = string.format("FPS: %d | Players: %d | Ping: %dms", fps, playerCount, ping)
+    end
+end)
+
+-- 9. Khóa nút điều khiển
+ToggleControls(false)
+
+screenGui.AncestryChanged:Connect(function(_, parent)
+    if not parent then ToggleControls(true) end
+end) 
