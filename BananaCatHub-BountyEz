@@ -1,54 +1,43 @@
--- [[ CONFIGS - CÀI ĐẶT CỦA BẠN ]] --
-repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer
-getgenv().Key = "7fa9974c2a7bc7a21f337e8d"
-getgenv().Setting = {
-    ["Team"] = "Pirate",
-    ["Method Click"] = {["Click Gun"] = false ,["Click Melee"] = true,["Click Sword"] = false,["Click Fruit"] = false, ["LowHealth"] = 5000, ["Delay Click"] = 0.3},
-    ["Race V4"] = {["Enable"] = true},
-    ["Webhook"] = {["Enabled"] = false,["Url Webhook"] = ""},
-    ["Misc"] = {["AutoBuyRandomandStoreFruit"] = true,["AutoBuySurprise"] = true},
-    ["SafeZone"] = {["Enable"] = true,["LowHealth"] = 4500,["MaxHealth"] = 8000,["Teleport Y"] = 2000},
-    ["Method Use Skill"] = {["Use Random"] = true,["Use Number"] = false},
-    ["Use random skill if player target low health"] = { ["Enabled"] = true, ["Low Health"] = 4000 },
-    ["Use Portal Teleport"] = false,
-    ["Target Time"] = 20,
-    ["Aim Prediction"] = 0.5,
-    ["Select Region"] = {["Enabled"] = false,["Region"] = {["Singapore"] = true,["United States"] = false,["Netherlands"] = false,["Germany"] =false,["India"] = false,["Australia"] = false}},
-    ["Ignore Devil Fruit"] = {"Human-Human","Portal-Portal"}, 
-    ["Dodge Skill Player"] = true,
-    ["Spam Dash"] = false,
-    ["Equip Weapon"] = { ["Enabled"] = false, ["Melee"] = {["Enabled"] = false, ["Name Weapon"] = ""}, ["Sword"] = {["Enabled"] = false, ["Name Weapon"] = ""}, ["Gun"] = {["Enabled"] = false, ["Name Weapon"] = ""} },
-    ["Weapons"] = {
-        ["Melee"] = { ["Enable"] = true, ["Skills"] = { ["Z"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 2}, ["X"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 3}, ["C"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 5} } },
-        ["Blox Fruit"] = { ["Enable"] = false, ["Skills"] = { ["Z"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 4}, ["X"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 6}, ["C"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 9}, ["V"] = {["Enable"] = false,["HoldTime"] = 0.3,["Number"] = 0}, ["F"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 8} } },
-        ["Gun"] = { ["Enable"] = true, ["Skills"] = { ["Z"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 1}, ["X"] = {["Enable"] = true,["HoldTime"] = 0.3,["Number"] = 7} } },
-        ["Sword"] = { ["Enable"] = false, ["Skills"] = { ["Z"] = {["Enable"] = true,["HoldTime"] = 1.5,["Number"] = 0}, ["X"] = {["Enable"] = true,["HoldTime"] = 0.5,["Number"] = 0} } }
-    }
-}
+-- [[ BANANA CAT OVERLAY - FIXED LOGIC ]] --
 
--- [[ BANANA CAT OVERLAY - FIXED ]] --
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
+-- 1. Xóa bản cũ
 for _, oldGui in pairs(PlayerGui:GetChildren()) do
-    if oldGui.Name == "BananaCatOverlay" then oldGui:Destroy() end
+    if oldGui.Name == "BananaCatOverlay" then
+        oldGui:Destroy()
+    end
 end
 
+-- 2. Hàm ẩn/hiện nút điều khiển Mobile
+local function ToggleControls(visible)
+    local touchGui = PlayerGui:FindFirstChild("TouchGui")
+    if touchGui then
+        touchGui.Enabled = visible
+    end
+end
+
+-- 3. Tạo ScreenGui chính
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BananaCatOverlay"
 screenGui.Parent = PlayerGui
 screenGui.IgnoreGuiInset = true 
 screenGui.ResetOnSpawn = false
+-- DisplayOrder cực cao để đè lên tất cả nhưng KHÔNG tắt Enabled của các GUI khác
 screenGui.DisplayOrder = 2147483647 
 
+-- 4. Khung nền đen đặc
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(1, 0, 1, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
+mainFrame.ZIndex = 1
 mainFrame.Parent = screenGui
 
+-- 5. Nút Bật/Tắt
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleButton"
 toggleBtn.Size = UDim2.new(0, 120, 0, 45)
@@ -65,47 +54,117 @@ local isHidden = false
 toggleBtn.MouseButton1Click:Connect(function()
     isHidden = not isHidden
     mainFrame.Visible = not isHidden
-    toggleBtn.Text = isHidden and "SHOW UI" or "HIDE UI"
-    toggleBtn.BackgroundColor3 = isHidden and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(30, 30, 30)
-end)
-
-local statsLabel = Instance.new("TextLabel")
-statsLabel.Size = UDim2.new(1, 0, 0.2, 0)
-statsLabel.Position = UDim2.new(0, 0, 0.4, 0)
-statsLabel.BackgroundTransparency = 1
-statsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-statsLabel.TextSize = 30
-statsLabel.Text = "Loading..."
-statsLabel.Parent = mainFrame
-
--- --- LOGIC CẬP NHẬT (KHÔNG ẨN GUI KHÁC) ---
-local startTime = tick()
-local totalBountyEarned = 0
-local initialBounty = 0
-
-local leaderstats = Player:WaitForChild("leaderstats", 10)
-if leaderstats and leaderstats:FindFirstChild("Bounty") then
-    initialBounty = leaderstats.Bounty.Value
-    leaderstats.Bounty.Changed:Connect(function(newVal)
-        totalBountyEarned = newVal - initialBounty
-    end)
-end
-
-task.spawn(function()
-    while task.wait(1) do
-        local elapsed = tick() - startTime
-        local h = math.floor(elapsed / 3600)
-        local m = math.floor((elapsed % 3600) / 60)
-        local s = math.floor(elapsed % 60)
-        
-        statsLabel.Text = string.format("Total Bounty: %d\nTime: %dh:%dm:%ds", totalBountyEarned, h, m, s)
+    if isHidden then
+        toggleBtn.Text = "SHOW UI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        ToggleControls(true)
+    else
+        toggleBtn.Text = "HIDE UI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        ToggleControls(false)
     end
 end)
 
+-- 6. Container chứa nội dung
+local centerContainer = Instance.new("Frame")
+centerContainer.Size = UDim2.new(0.9, 0, 0.6, 0)
+centerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+centerContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+centerContainer.BackgroundTransparency = 1
+centerContainer.ZIndex = 10
+centerContainer.Parent = mainFrame
+
+-- 7. Tiêu đề
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.3, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 50
+title.RichText = true
+title.ZIndex = 11
+title.Text = '<font color="rgb(255, 255, 0)">Banana Cat Hub</font> <font color="rgb(255, 50, 50)">Auto Bounty</font>'
+title.Parent = centerContainer
+
+-- 8. Nhãn thông số chính
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Size = UDim2.new(1, 0, 0.3, 0)
+statsLabel.Position = UDim2.new(0, 0, 0.35, 0)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Font = Enum.Font.SourceSans
+statsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statsLabel.TextSize = 30
+statsLabel.ZIndex = 11
+statsLabel.Text = "Total Bounty Earned: 0\nTime Elapsed: 0h:0m:0s"
+statsLabel.Parent = centerContainer
+
+-- 9. Nhãn thông số kỹ thuật
+local extraStatsLabel = Instance.new("TextLabel")
+extraStatsLabel.Size = UDim2.new(1, 0, 0.2, 0)
+extraStatsLabel.Position = UDim2.new(0, 0, 0.7, 0)
+extraStatsLabel.BackgroundTransparency = 1
+extraStatsLabel.Font = Enum.Font.SourceSans
+extraStatsLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+extraStatsLabel.TextSize = 28
+extraStatsLabel.ZIndex = 11
+extraStatsLabel.Text = "FPS: 0 | Players: 0 | Ping: 0ms"
+extraStatsLabel.Parent = centerContainer
+
+-- --- LOGIC CẬP NHẬT ---
+local startTime = tick()
+local totalBountyEarned = 0
+local initialBounty = 0
+local fps = 0
+local lastUpdate = tick()
+local frameCount = 0
+
+local leaderstats = Player:FindFirstChild("leaderstats")
+if leaderstats and leaderstats:FindFirstChild("Bounty") then
+    initialBounty = leaderstats.Bounty.Value
+    leaderstats.Bounty.Changed:Connect(function(newVal)
+        totalBountyEarned = math.max(0, newVal - initialBounty)
+    end)
+end
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastUpdate >= 1 then
+        fps = frameCount
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+local function formatTime(seconds)
+    local h = math.floor(seconds / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%dh:%dm:%ds", h, m, s)
+end
+
+-- Vòng lặp cập nhật thông tin
+task.spawn(function()
+    while task.wait(0.5) do
+        if not screenGui or not screenGui.Parent then break end
+        
+        local elapsed = tick() - startTime
+        local playerCount = #game.Players:GetPlayers()
+        local ping = 0
+        pcall(function() ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+
+        statsLabel.Text = string.format("Total Bounty Earned: %s\nTime Elapsed: %s", tostring(totalBountyEarned), formatTime(elapsed))
+        extraStatsLabel.Text = string.format("FPS: %d | Players: %d | Ping: %dms", fps, playerCount, ping)
+        
+        -- ĐÃ XÓA PHẦN ÉP ẨN GUI KHÁC ĐỂ TRÁNH LỖI CONFIGS
+    end
+end)
+
+ToggleControls(false)
+
 --- 10. LOAD SCRIPT CHÍNH ---
-print("Banana Cat: Loading Main Script...")
+-- Đảm bảo script chính chạy sau khi UI Overlay đã sẵn sàng
 task.spawn(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/zeronokamitinh-sudo/BananaCatHub-BountyEz/refs/heads/main/BananaCatHub-BountyEz"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-BountyEz.lua"))()
     end)
 end)
