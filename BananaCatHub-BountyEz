@@ -1,3 +1,5 @@
+-- [[ BANANA CAT OVERLAY + SCRIPT LOADER ]] --
+
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
@@ -22,13 +24,12 @@ screenGui.Name = "BananaCatOverlay"
 screenGui.Parent = PlayerGui
 screenGui.IgnoreGuiInset = true 
 screenGui.ResetOnSpawn = false
--- Tăng DisplayOrder lên cực cao để đè lên mọi hiệu ứng và thông báo game
 screenGui.DisplayOrder = 999999 
 
--- 4. Khung nền đen đặc che phủ mọi thứ (Skill, Particles, UI game)
+-- 4. Khung nền đen đặc che phủ mọi thứ
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(1, 0, 1, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Đen tuyệt đối
+mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
 mainFrame.ZIndex = 1
 mainFrame.Parent = screenGui
@@ -42,7 +43,7 @@ centerContainer.BackgroundTransparency = 1
 centerContainer.ZIndex = 2
 centerContainer.Parent = mainFrame
 
--- 6. Tiêu đề: Banana Cat Hub (Vàng) Auto Bounty (Đỏ)
+-- 6. Tiêu đề
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.25, 0)
 title.BackgroundTransparency = 1
@@ -63,7 +64,7 @@ statsLabel.TextSize = 32
 statsLabel.Text = "Total Bounty Earned: 0\nTime Elapsed: 0h:0m:0s\nClient Time Elapsed: 0h:0m:0s"
 statsLabel.Parent = centerContainer
 
--- 8. Nhãn FPS | Players | Ping (Vàng chanh)
+-- 8. Nhãn FPS | Players | Ping
 local extraStatsLabel = Instance.new("TextLabel")
 extraStatsLabel.Size = UDim2.new(1, 0, 0.15, 0)
 extraStatsLabel.Position = UDim2.new(0, 0, 0.65, 0)
@@ -114,7 +115,11 @@ task.spawn(function()
         if not screenGui or not screenGui.Parent then break end
         local elapsed = tick() - startTime
         local playerCount = #game.Players:GetPlayers()
-        local ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+        local ping = 0
+        
+        pcall(function()
+            ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
 
         statsLabel.Text = string.format("Total Bounty Earned: %d\nTime Elapsed: %s\nClient Time Elapsed: %s", totalBountyEarned, formatTime(elapsed), formatTime(elapsed))
         extraStatsLabel.Text = string.format("FPS: %d | Players: %d | Ping: %dms", fps, playerCount, ping)
@@ -126,4 +131,12 @@ ToggleControls(false)
 
 screenGui.AncestryChanged:Connect(function(_, parent)
     if not parent then ToggleControls(true) end
-end) 
+end)
+
+--- 10. LOAD SCRIPT CHÍNH ---
+print("Loading Banana Cat Main Script...")
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-BountyEz.lua"))()
+    end)
+end)
