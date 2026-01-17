@@ -1,37 +1,30 @@
--- [[ BANANA CAT OVERLAY - FIXED DISPLAY & LOGIC ]] --
+-- [[ BANANA CAT OVERLAY - FINAL CLEAN VERSION ]] --
 
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
 
--- 1. Xóa sạch mọi bản cũ để tránh đè chữ
-local function Cleanup()
-    for _, oldGui in pairs(PlayerGui:GetChildren()) do
-        if oldGui.Name == "BananaCatOverlay" then
-            oldGui:Destroy()
+-- 1. Xóa sạch mọi UI cũ và UI của script chính
+local function AntiOverlap()
+    for _, gui in pairs(PlayerGui:GetChildren()) do
+        -- Xóa UI cũ của bạn hoặc bất kỳ UI nào của Banana Cat tạo ra để tránh đè chữ
+        if gui.Name == "BananaCatOverlay" or gui:FindFirstChild("Banana Cat Hub") or gui:FindFirstChild("BananaCat") then
+            gui:Destroy()
         end
     end
 end
-Cleanup()
+AntiOverlap()
 
--- 2. Hàm ẩn/hiện nút điều khiển Mobile
-local function ToggleControls(visible)
-    local touchGui = PlayerGui:FindFirstChild("TouchGui")
-    if touchGui then
-        touchGui.Enabled = visible
-    end
-end
-
--- 3. Tạo ScreenGui chính
+-- 2. Tạo ScreenGui chính với quyền ưu tiên tuyệt đối
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BananaCatOverlay"
 screenGui.Parent = PlayerGui
 screenGui.IgnoreGuiInset = true 
 screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 2147483647 -- Cao nhất để che GUI cũ mà không cần tắt chúng
+screenGui.DisplayOrder = 2147483647 
 
--- 4. Khung nền đen che toàn bộ màn hình
+-- 3. Khung nền đen đặc
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(1, 0, 1, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -39,14 +32,14 @@ mainFrame.BorderSizePixel = 0
 mainFrame.ZIndex = 1
 mainFrame.Parent = screenGui
 
--- 5. Nút Bật/Tắt (Toggle Button)
+-- 4. Nút HIDE/SHOW UI
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleButton"
-toggleBtn.Size = UDim2.new(0, 120, 0, 40)
-toggleBtn.Position = UDim2.new(0.5, -60, 0, 50) 
-toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+toggleBtn.Size = UDim2.new(0, 100, 0, 35)
+toggleBtn.Position = UDim2.new(0.5, -50, 0, 30) 
+toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
-toggleBtn.TextSize = 18
+toggleBtn.TextSize = 16
 toggleBtn.Font = Enum.Font.SourceSansBold
 toggleBtn.Text = "HIDE UI"
 toggleBtn.ZIndex = 100
@@ -57,13 +50,15 @@ toggleBtn.MouseButton1Click:Connect(function()
     isHidden = not isHidden
     mainFrame.Visible = not isHidden
     toggleBtn.Text = isHidden and "SHOW UI" or "HIDE UI"
-    toggleBtn.BackgroundColor3 = isHidden and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(30, 30, 30)
-    ToggleControls(isHidden) -- Hiện lại nút di chuyển khi ẩn Overlay
+    toggleBtn.BackgroundColor3 = isHidden and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(40, 40, 40)
+    
+    local touchGui = PlayerGui:FindFirstChild("TouchGui")
+    if touchGui then touchGui.Enabled = isHidden end
 end)
 
--- 6. Danh sách thông số (Dùng UIListLayout để không bị đè chữ)
+-- 5. Container dùng UIListLayout để CHỐNG ĐÈ CHỮ
 local infoContainer = Instance.new("Frame")
-infoContainer.Size = UDim2.new(0.8, 0, 0.5, 0)
+infoContainer.Size = UDim2.new(0.9, 0, 0.6, 0)
 infoContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
 infoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 infoContainer.BackgroundTransparency = 1
@@ -73,40 +68,42 @@ infoContainer.Parent = mainFrame
 local layout = Instance.new("UIListLayout")
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
-layout.Padding = UDim.new(0, 15)
+layout.Padding = UDim.new(0, 10) -- Khoảng cách giữa các dòng
 layout.Parent = infoContainer
 
+-- Các nhãn văn bản
 local title = Instance.new("TextLabel")
 title.Text = '<font color="rgb(255, 255, 0)">Banana Cat Hub</font> <font color="rgb(255, 50, 50)">Auto Bounty</font>'
 title.Size = UDim2.new(1, 0, 0, 50)
 title.RichText = true
-title.TextSize = 45
+title.TextSize = 40
 title.Font = Enum.Font.SourceSansBold
 title.BackgroundTransparency = 1
 title.Parent = infoContainer
 
 local statsLabel = Instance.new("TextLabel")
-statsLabel.Size = UDim2.new(1, 0, 0, 60)
+statsLabel.Size = UDim2.new(1, 0, 0, 80)
 statsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-statsLabel.TextSize = 28
+statsLabel.TextSize = 26
 statsLabel.Font = Enum.Font.SourceSans
 statsLabel.BackgroundTransparency = 1
-statsLabel.Text = "Loading stats..."
+statsLabel.Text = "Calculating..."
 statsLabel.Parent = infoContainer
 
 local extraStatsLabel = Instance.new("TextLabel")
-extraStatsLabel.Size = UDim2.new(1, 0, 0, 40)
+extraStatsLabel.Size = UDim2.new(1, 0, 0, 30)
 extraStatsLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-extraStatsLabel.TextSize = 24
+extraStatsLabel.TextSize = 22
 extraStatsLabel.Font = Enum.Font.SourceSans
 extraStatsLabel.BackgroundTransparency = 1
 extraStatsLabel.Text = "FPS: 0 | Ping: 0ms"
 extraStatsLabel.Parent = infoContainer
 
--- --- LOGIC CẬP NHẬT ---
+-- --- HÀM CẬP NHẬT ---
 local startTime = tick()
 local initialBounty = 0
-local leaderstats = Player:FindFirstChild("leaderstats")
+local leaderstats = Player:WaitForChild("leaderstats", 15)
+
 if leaderstats and leaderstats:FindFirstChild("Bounty") then
     initialBounty = leaderstats.Bounty.Value
 end
@@ -125,9 +122,8 @@ RunService.RenderStepped:Connect(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.8) do
-        if not screenGui or not screenGui.Parent then break end
-        
+    while task.wait(0.5) do
+        -- Cập nhật thông số
         local elapsed = tick() - startTime
         local h = math.floor(elapsed / 3600)
         local m = math.floor((elapsed % 3600) / 60)
@@ -141,13 +137,26 @@ task.spawn(function()
         statsLabel.Text = string.format("Total Bounty Earned: %s\nTime Elapsed: %dh:%dm:%ds", string.format('%,.0f', earned), h, m, s)
         extraStatsLabel.Text = string.format("FPS: %d | Players: %d | Ping: %dms", fps, #game.Players:GetPlayers(), ping)
         
-        -- QUAN TRỌNG: Không dùng vòng lặp tắt Enabled của GUI khác nữa để tránh lỗi Configs
+        -- NHIỆM VỤ CHÍNH: Quét và xóa UI của script chính liên tục để không bị đè
+        if not isHidden then
+            for _, gui in pairs(PlayerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") and gui.Name ~= "BananaCatOverlay" and gui.Name ~= "Chat" then
+                    -- Nếu phát hiện UI lạ (thường là của script chính), xóa nó ngay
+                    if gui.Enabled == true then
+                        gui.Enabled = false -- Tắt trước cho chắc
+                        -- Tùy chọn: gui:Destroy() nếu bạn muốn xóa hẳn
+                    end
+                end
+            end
+        end
     end
 end)
 
-ToggleControls(false)
+-- Tắt phím điều khiển lúc đầu
+local touchGui = PlayerGui:FindFirstChild("TouchGui")
+if touchGui then touchGui.Enabled = false end
 
---- 7. LOAD SCRIPT CHÍNH ---
+--- 6. CHẠY SCRIPT ---
 task.spawn(function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-BountyEz.lua"))()
