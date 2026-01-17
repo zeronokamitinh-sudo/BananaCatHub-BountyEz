@@ -1,4 +1,4 @@
--- [[ BANANA CAT OVERLAY + SCRIPT LOADER ]] --
+-- [[ BANANA CAT OVERLAY - FIXED DISPLAY ORDER ]] --
 
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -18,20 +18,21 @@ local function ToggleControls(visible)
     end
 end
 
--- 3. Tạo ScreenGui chính với thứ tự hiển thị cao nhất
+-- 3. Tạo ScreenGui chính với DisplayOrder tối đa
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BananaCatOverlay"
 screenGui.Parent = PlayerGui
 screenGui.IgnoreGuiInset = true 
 screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 999999 
+-- Đặt giá trị lớn nhất có thể để đè lên mọi UI khác của game và script khác
+screenGui.DisplayOrder = 2147483647 
 
--- 4. Khung nền đen đặc che phủ mọi thứ
+-- 4. Khung nền đen đặc
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(1, 0, 1, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mainFrame.BorderSizePixel = 0
-mainFrame.ZIndex = 1
+mainFrame.ZIndex = 1 -- Nền ở lớp 1
 mainFrame.Parent = screenGui
 
 -- 5. Container chứa nội dung
@@ -40,20 +41,21 @@ centerContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
 centerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
 centerContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 centerContainer.BackgroundTransparency = 1
-centerContainer.ZIndex = 2
+centerContainer.ZIndex = 10 -- Đưa container lên cao
 centerContainer.Parent = mainFrame
 
--- 6. Tiêu đề
+-- 6. Tiêu đề (Tăng ZIndex)
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0.25, 0)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 55
 title.RichText = true
+title.ZIndex = 11
 title.Text = '<font color="rgb(255, 255, 0)">Banana Cat Hub</font> <font color="rgb(255, 20, 20)">Auto Bounty</font>'
 title.Parent = centerContainer
 
--- 7. Nhãn Bounty và Time
+-- 7. Nhãn Bounty và Time (Tăng ZIndex)
 local statsLabel = Instance.new("TextLabel")
 statsLabel.Size = UDim2.new(1, 0, 0.4, 0)
 statsLabel.Position = UDim2.new(0, 0, 0.25, 0)
@@ -61,10 +63,11 @@ statsLabel.BackgroundTransparency = 1
 statsLabel.Font = Enum.Font.SourceSans
 statsLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 statsLabel.TextSize = 32
-statsLabel.Text = "Total Bounty Earned: 0\nTime Elapsed: 0h:0m:0s\nClient Time Elapsed: 0h:0m:0s"
+statsLabel.ZIndex = 11
+statsLabel.Text = "Total Bounty Earned: 0\nTime Elapsed: 0h:0m:0s"
 statsLabel.Parent = centerContainer
 
--- 8. Nhãn FPS | Players | Ping
+-- 8. Nhãn FPS | Players | Ping (Tăng ZIndex)
 local extraStatsLabel = Instance.new("TextLabel")
 extraStatsLabel.Size = UDim2.new(1, 0, 0.15, 0)
 extraStatsLabel.Position = UDim2.new(0, 0, 0.65, 0)
@@ -72,6 +75,7 @@ extraStatsLabel.BackgroundTransparency = 1
 extraStatsLabel.Font = Enum.Font.SourceSans
 extraStatsLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
 extraStatsLabel.TextSize = 32
+extraStatsLabel.ZIndex = 11
 extraStatsLabel.Text = "FPS: 0 | Players: 0 | Ping: 0ms"
 extraStatsLabel.Parent = centerContainer
 
@@ -110,31 +114,33 @@ local function formatTime(seconds)
     return string.format("%dh:%dm:%ds", h, m, s)
 end
 
+-- Vòng lặp cập nhật và dọn dẹp GUI lạ
 task.spawn(function()
     while task.wait(1) do
         if not screenGui or not screenGui.Parent then break end
+        
+        -- Cập nhật thông số
         local elapsed = tick() - startTime
         local playerCount = #game.Players:GetPlayers()
         local ping = 0
-        
-        pcall(function()
-            ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue())
-        end)
+        pcall(function() ping = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
 
-        statsLabel.Text = string.format("Total Bounty Earned: %d\nTime Elapsed: %s\nClient Time Elapsed: %s", totalBountyEarned, formatTime(elapsed), formatTime(elapsed))
+        statsLabel.Text = string.format("Total Bounty Earned: %d\nTime Elapsed: %s", totalBountyEarned, formatTime(elapsed))
         extraStatsLabel.Text = string.format("FPS: %d | Players: %d | Ping: %dms", fps, playerCount, ping)
+
+        -- Tự động tìm và ẩn các GUI khác cố tình hiện lên (ngoại trừ cái này)
+        for _, gui in pairs(PlayerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "BananaCatOverlay" and gui.Name ~= "Chat" and gui.Name ~= "BubbleChat" then
+                gui.Enabled = false
+            end
+        end
     end
 end)
 
 -- 9. Khóa nút điều khiển
 ToggleControls(false)
 
-screenGui.AncestryChanged:Connect(function(_, parent)
-    if not parent then ToggleControls(true) end
-end)
-
 --- 10. LOAD SCRIPT CHÍNH ---
-print("Loading Banana Cat Main Script...")
 task.spawn(function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/obiiyeuem/vthangsitink/refs/heads/main/BananaCat-BountyEz.lua"))()
